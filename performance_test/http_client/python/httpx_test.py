@@ -3,23 +3,21 @@ import asyncio
 import collections
 
 import uvloop
-import aiohttp
+import httpx
 
 URL = "http://nginx:21000"
 
 
-async def fetch(session: aiohttp.ClientSession):
+async def fetch(client: httpx.AsyncClient):
     """Performs a single HTTP GET request."""
     url = URL
-    # The client session timeout will handle request timeouts.
-    async with session.get(url) as response:
-        # We don't need the body, but reading it ensures the connection
-        # is released back to the pool properly.
-        await response.read()
+    # The client timeout will handle request timeouts. For non-streaming requests,
+    # httpx automatically reads the response body and releases the connection.
+    await client.get(url)
 
 
 async def worker(
-    session: aiohttp.ClientSession,
+    client: httpx.AsyncClient,
     counters: collections.Counter,
     start_event: asyncio.Event,
 ):
@@ -27,7 +25,7 @@ async def worker(
     await start_event.wait()
     while True:
         try:
-            await fetch(session)
+            await fetch(client)
             counters["success"] += 1
         except asyncio.CancelledError:
             # The task was cancelled, which is the signal to stop.
@@ -43,16 +41,17 @@ async def main():
     counters = collections.Counter()
     start_event = asyncio.Event()
 
-    # A timeout is set on the session, so individual requests will time out if they take too long.
-    timeout = aiohttp.ClientTimeout(total=10)
-    async with aiohttp.ClientSession(timeout=timeout) as session:
+    # A timeout is set on the client, so individual requests will time out if they take too long.
+    timeout = httpx.Timeout(10.0)
+    # The default limits are 100 connections, which is what we want for this test.
+    async with httpx.AsyncClient(timeout=timeout) as client:
         print(
             f"Starting throughput test for {test_duration}s with a concurrency of {concurrency}..."
         )
 
         # Create worker tasks. They will wait for the start_event.
         tasks = [
-            asyncio.create_task(worker(session, counters, start_event))
+            asyncio.create_task(worker(client, counters, start_event))
             for _ in range(concurrency)
         ]
 
