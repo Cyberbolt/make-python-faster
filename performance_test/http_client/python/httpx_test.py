@@ -1,6 +1,7 @@
 import time
 import asyncio
 import collections
+import multiprocessing
 
 import uvloop
 import httpx
@@ -35,20 +36,13 @@ async def worker(
             counters["failed"] += 1
 
 
-async def main():
-    test_duration = 30  # seconds
-    concurrency = 24
+async def run_test(duration: int, concurrency: int):
+    """Runs the workload for a specified duration and concurrency, and returns the results."""
     counters = collections.Counter()
     start_event = asyncio.Event()
 
     # A timeout is set on the client, so individual requests will time out if they take too long.
-    timeout = httpx.Timeout(10.0)
-    # The default limits are 100 connections, which is what we want for this test.
-    async with httpx.AsyncClient(timeout=timeout) as client:
-        print(
-            f"Starting throughput test for {test_duration}s with a concurrency of {concurrency}..."
-        )
-
+    async with httpx.AsyncClient(timeout=10) as client:
         # Create worker tasks. They will wait for the start_event.
         tasks = [
             asyncio.create_task(worker(client, counters, start_event))
@@ -60,7 +54,7 @@ async def main():
         start_time = time.monotonic()
 
         # Let the workers run for the specified duration.
-        await asyncio.sleep(test_duration)
+        await asyncio.sleep(duration)
 
         # Cancel all worker tasks to stop them gracefully.
         for task in tasks:
@@ -71,17 +65,86 @@ async def main():
 
         end_time = time.monotonic()
         actual_duration = end_time - start_time
+        return counters["success"], counters["failed"], actual_duration
 
-        print("\n--- Test Results ---")
-        print(f"Test ran for: {actual_duration:.2f} seconds")
-        print(f"Successful requests: {counters['success']}")
-        print(f"Failed requests: {counters['failed']}")
 
-        if actual_duration > 0:
-            rps = counters["success"] / actual_duration
-            print(f"Successful requests per second (RPS): {rps:.0f}")
+async def single_core_test(
+    duration: int = 30,
+    concurrency: int = 24,
+):
+    test_duration = duration  # seconds
+    concurrency = concurrency
+    print(
+        f"Starting single-core test for {test_duration}s with a concurrency of {concurrency}..."
+    )
+
+    success, failed, duration = await run_test(test_duration, concurrency)
+
+    print("\n--- Single-Core Test Results ---")
+    print(f"Test ran for: {duration:.2f} seconds")
+    print(f"Successful requests: {success}")
+    print(f"Failed requests: {failed}")
+
+    if duration > 0:
+        rps = success / duration
+        print(f"Successful requests per second (RPS): {rps:.0f}")
+
+
+def process_worker(result_queue: multiprocessing.Queue):
+    """The target function for each process in the multi-core test."""
+    test_duration = 30  # seconds
+    concurrency = 24
+    success, failed, duration = uvloop.run(run_test(test_duration, concurrency))
+    result_queue.put((success, failed, duration))
+
+
+def multi_core_test(
+    num_processes: int = 4,
+    duration: int = 30,
+    concurrency: int = 24,
+):
+    """Runs the test across multiple processes to utilize multiple CPU cores."""
+    num_processes = num_processes
+    test_duration = duration
+    concurrency = concurrency
+    print(
+        f"Starting multi-core test for {test_duration}s with a concurrency of "
+        f"{concurrency} per process across {num_processes} processes..."
+    )
+
+    ctx = multiprocessing.get_context("spawn")
+    result_queue = ctx.Queue()
+
+    processes = [
+        ctx.Process(target=process_worker, args=(result_queue,))
+        for _ in range(num_processes)
+    ]
+
+    start_time = time.monotonic()
+    for p in processes:
+        p.start()
+    for p in processes:
+        p.join()
+    total_duration = time.monotonic() - start_time
+
+    total_success = 0
+    total_failed = 0
+    total_rps = 0.0
+
+    while not result_queue.empty():
+        success, failed, duration = result_queue.get()
+        total_success += success
+        total_failed += failed
+        if duration > 0:
+            total_rps += success / duration
+
+    print("\n--- Multi-Core Test Results ---")
+    print(f"Test ran for: {total_duration:.2f} seconds")
+    print(f"Total successful requests: {total_success}")
+    print(f"Total failed requests: {total_failed}")
+    print(f"Aggregated RPS (sum of RPS from each process): {total_rps:.0f}")
 
 
 if __name__ == "__main__":
-    # asyncio.run(main())
-    uvloop.run(main())
+    # uvloop.run(single_core_test(duration=30, concurrency=24))
+    multi_core_test(num_processes=4, duration=30, concurrency=24)
