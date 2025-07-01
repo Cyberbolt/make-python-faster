@@ -5,7 +5,7 @@ import collections
 import uvloop
 import aiohttp
 
-URL = "http://192.168.31.233:21000"
+URL = "http://nginx:21000"
 
 
 async def fetch(session: aiohttp.ClientSession):
@@ -18,8 +18,13 @@ async def fetch(session: aiohttp.ClientSession):
         await response.read()
 
 
-async def worker(session: aiohttp.ClientSession, counters: collections.Counter):
+async def worker(
+    session: aiohttp.ClientSession,
+    counters: collections.Counter,
+    start_event: asyncio.Event,
+):
     """A worker that runs until cancelled, performing requests and counting results."""
+    await start_event.wait()
     while True:
         try:
             await fetch(session)
@@ -33,9 +38,10 @@ async def worker(session: aiohttp.ClientSession, counters: collections.Counter):
 
 
 async def main():
-    test_duration = 30  # seconds
+    test_duration = 60  # seconds
     concurrency = 100
     counters = collections.Counter()
+    start_event = asyncio.Event()
 
     # A timeout is set on the session, so individual requests will time out if they take too long.
     timeout = aiohttp.ClientTimeout(total=10)
@@ -43,12 +49,16 @@ async def main():
         print(
             f"Starting throughput test for {test_duration}s with a concurrency of {concurrency}..."
         )
-        start_time = time.monotonic()
 
-        # Create worker tasks that will run concurrently.
+        # Create worker tasks. They will wait for the start_event.
         tasks = [
-            asyncio.create_task(worker(session, counters)) for _ in range(concurrency)
+            asyncio.create_task(worker(session, counters, start_event))
+            for _ in range(concurrency)
         ]
+
+        # All tasks are created and waiting. Now, signal them to start and begin timing.
+        start_event.set()
+        start_time = time.monotonic()
 
         # Let the workers run for the specified duration.
         await asyncio.sleep(test_duration)
@@ -74,4 +84,5 @@ async def main():
 
 
 if __name__ == "__main__":
+    # asyncio.run(main())
     uvloop.run(main())
