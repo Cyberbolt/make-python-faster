@@ -96,12 +96,14 @@ async def single_core_test(
     return rps
 
 
-def process_worker(result_queue: multiprocessing.Queue):
+def process_worker(
+    result_queue: multiprocessing.Queue, duration: int, concurrency: int
+):
     """The target function for each process in the multi-core test."""
-    test_duration = 30  # seconds
-    concurrency = 24
-    success, failed, duration = uvloop.run(run_test(test_duration, concurrency))
-    result_queue.put((success, failed, duration))
+    success, failed, actual_duration = uvloop.run(
+        run_test(duration, concurrency)
+    )
+    result_queue.put((success, failed, actual_duration))
 
 
 def multi_core_test(
@@ -122,7 +124,9 @@ def multi_core_test(
     result_queue = ctx.Queue()
 
     processes = [
-        ctx.Process(target=process_worker, args=(result_queue,))
+        ctx.Process(
+            target=process_worker, args=(result_queue, test_duration, concurrency)
+        )
         for _ in range(num_processes)
     ]
 
