@@ -71,7 +71,7 @@ async def run_test(duration: int, concurrency: int):
 async def single_core_test(
     duration: int = 30,
     concurrency: int = 24,
-):
+) -> float:
     test_duration = duration  # seconds
     concurrency = concurrency
     print(
@@ -85,9 +85,12 @@ async def single_core_test(
     print(f"Successful requests: {success}")
     print(f"Failed requests: {failed}")
 
+    rps = 0.0
     if duration > 0:
         rps = success / duration
         print(f"Successful requests per second (RPS): {rps:.0f}")
+
+    return rps
 
 
 def process_worker(result_queue: multiprocessing.Queue):
@@ -102,7 +105,7 @@ def multi_core_test(
     num_processes: int = 4,
     duration: int = 30,
     concurrency: int = 24,
-):
+) -> float:
     """Runs the test across multiple processes to utilize multiple CPU cores."""
     num_processes = num_processes
     test_duration = duration
@@ -144,7 +147,9 @@ def multi_core_test(
     print(f"Total failed requests: {total_failed}")
     print(f"Aggregated RPS (sum of RPS from each process): {total_rps:.0f}")
 
+    return total_rps
+
 
 if __name__ == "__main__":
-    # uvloop.run(single_core_test(duration=30, concurrency=24))
-    multi_core_test(num_processes=4, duration=30, concurrency=24)
+    single_rps = uvloop.run(single_core_test(duration=30, concurrency=24))
+    multi_rps = multi_core_test(num_processes=4, duration=30, concurrency=24)
