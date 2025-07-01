@@ -164,6 +164,6 @@ fn multi_core_test(num_processes: usize, duration: u64, concurrency: u32) -> f64
 
 #[tokio::main]
 async fn main() {
-    single_core_test(30, 24).await;
-    multi_core_test(4, 30, 24);
+    single_core_test(30, 50).await;
+    multi_core_test(4, 30, 50);
 }

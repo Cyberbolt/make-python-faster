@@ -18,9 +18,9 @@ const (
 	URL                                = "http://nginx:21000"
 	DURATION                           = 30 * time.Second
 	CLIENT_TIMEOUT                     = 10 * time.Second
-	SINGLE_CORE_CONCURRENCY            = 24
+	SINGLE_CORE_CONCURRENCY            = 50
 	MULTI_CORE_WORKERS                 = 4
-	MULTI_CORE_CONCURRENCY_PER_WORKER  = 24
+	MULTI_CORE_CONCURRENCY_PER_WORKER  = 50
 )
 
 func worker(ctx context.Context, client *http.Client, wg *sync.WaitGroup, success, failed *atomic.Uint64) {

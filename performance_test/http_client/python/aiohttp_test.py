@@ -158,5 +158,5 @@ def multi_core_test(
 
 
 if __name__ == "__main__":
-    single_rps = uvloop.run(single_core_test(duration=30, concurrency=24))
-    multi_rps = multi_core_test(num_processes=4, duration=30, concurrency=24)
+    single_rps = uvloop.run(single_core_test(duration=30, concurrency=50))
+    multi_rps = multi_core_test(num_processes=4, duration=30, concurrency=50)
