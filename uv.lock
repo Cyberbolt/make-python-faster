@@ -216,7 +216,7 @@ wheels = [
 [[package]]
 name = "faster-http"
 version = "0.1.0"
-source = { git = "https://github.com/Cyberbolt/faster-http.git?rev=dev#e5fd9cbffceee98b76888062949c4458b5785b5e" }
+source = { git = "https://github.com/Cyberbolt/faster-http.git?rev=dev#815627afc76e7f9238614e110ccd4d49276f2a2d" }
 dependencies = [
     { name = "typing-extensions" },
 ]
