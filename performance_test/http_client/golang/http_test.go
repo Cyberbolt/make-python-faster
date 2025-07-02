@@ -16,7 +16,7 @@ import (
 const (
 	URL            = "http://nginx:21000"
 	DURATION       = 30 * time.Second
-	CONCURRENCY    = 50
+	CONCURRENCY    = 500
 	CLIENT_TIMEOUT = 10 * time.Second
 )
 
