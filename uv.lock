@@ -214,6 +214,14 @@ wheels = [
 ]
 
 [[package]]
+name = "faster-http"
+version = "0.1.0"
+source = { git = "https://github.com/Cyberbolt/faster-http.git?rev=dev#e5fd9cbffceee98b76888062949c4458b5785b5e" }
+dependencies = [
+    { name = "typing-extensions" },
+]
+
+[[package]]
 name = "frozenlist"
 version = "1.7.0"
 source = { registry = "https://pypi.org/simple" }
@@ -325,6 +333,7 @@ version = "0.1.0"
 source = { virtual = "." }
 dependencies = [
     { name = "aiohttp", extra = ["speedups"] },
+    { name = "faster-http" },
     { name = "httpx" },
     { name = "uvloop" },
 ]
@@ -332,6 +341,7 @@ dependencies = [
 [package.metadata]
 requires-dist = [
     { name = "aiohttp", extras = ["speedups"], specifier = ">=3.12.13" },
+    { name = "faster-http", git = "https://github.com/Cyberbolt/faster-http.git?rev=dev" },
     { name = "httpx", specifier = ">=0.28.1" },
     { name = "uvloop", specifier = ">=0.21.0" },
 ]

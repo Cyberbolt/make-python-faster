@@ -6,6 +6,10 @@ readme = "README.md"
 requires-python = ">=3.12"
 dependencies = [
     "aiohttp[speedups]>=3.12.13",
+    "faster-http",
     "httpx>=0.28.1",
     "uvloop>=0.21.0",
 ]
+
+[tool.uv.sources]
+faster-http = { git = "https://github.com/Cyberbolt/faster-http.git", rev = "dev" }
